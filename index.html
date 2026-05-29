@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>名侦探柯南 · 侦探档案馆｜声效推理版</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { font-family: system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #0a0c14; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 16px; }
+  .app-container { max-width: 550px; width: 100%; background: #111827; border-radius: 36px; padding: 20px 18px 28px; box-shadow: 0 20px 35px -10px rgba(0,0,0,0.5); }
+  .title-area { text-align: center; margin-bottom: 18px; }
+  .main-title { font-size: 28px; font-weight: 800; color: #f5c518; letter-spacing: 2px; }
+  .sub { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+  
+  /* 面板过渡 */
+  .panel {
+    transition: opacity 0.22s cubic-bezier(0.2, 0.9, 0.4, 1.1), visibility 0s linear 0.22s;
+    opacity: 0;
+    visibility: hidden;
+    will-change: opacity;
+  }
+  .panel.active {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.22s cubic-bezier(0.2, 0.9, 0.4, 1.1), visibility 0s linear 0s;
+  }
+  .hide { display: none !important; }
+  
+  .mode-buttons { display: flex; gap: 14px; margin: 24px 0 16px; }
+  .mode-btn { flex: 1; padding: 14px 0; border-radius: 60px; border: none; font-weight: 700; font-size: 17px; cursor: pointer; background: #1e293b; color: white; transition: transform 0.1s, background 0.1s; }
+  .mode-btn:active { transform: scale(0.96); background: #2d3a4e; }
+  .btn-casual { background: #2563eb; }
+  .btn-reasoning { background: #dc2626; }
+  .secondary-btn { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(245,197,24,0.3); border-radius: 40px; padding: 12px; color: #f5c518; font-weight: 600; cursor: pointer; margin-top: 10px; transition: background 0.1s; }
+  .secondary-btn:active { background: rgba(255,255,255,0.1); }
+  .case-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+  .back-icon { background: rgba(255,255,255,0.08); border: none; color: white; width: 36px; height: 36px; border-radius: 40px; font-size: 20px; cursor: pointer; transition: background 0.1s; }
+  .back-icon:active { background: rgba(255,255,255,0.2); }
+  .case-grid { max-height: 65vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+  .case-card { background: rgba(255,255,255,0.04); border-radius: 20px; padding: 14px 16px; border: 1px solid #2d3748; cursor: pointer; transition: background 0.1s, transform 0.05s; }
+  .case-card:active { background: rgba(255,255,255,0.08); transform: scale(0.98); }
+  .case-name { font-weight: 700; color: #f3f4f6; display: flex; justify-content: space-between; }
+  .case-solved-mark { color: #22c55e; font-size: 13px; }
+  .case-desc { font-size: 11px; color: #9ca3af; margin-top: 6px; }
+  .quiz-info { display: flex; justify-content: space-between; font-size: 13px; color: #cbd5e1; margin-bottom: 12px; }
+  .progress-bar { background: #1e293b; border-radius: 20px; height: 6px; margin-bottom: 20px; overflow: hidden; }
+  .progress-fill { background: #f5c518; width: 0%; height: 100%; transition: width 0.2s ease; }
+  .question-card { background: #0f172a; border-radius: 28px; padding: 22px 20px; border: 1px solid #2d3748; margin-bottom: 18px; }
+  .question-text { color: white; font-size: 18px; font-weight: 500; line-height: 1.45; }
+  .options-area { display: flex; flex-direction: column; gap: 12px; }
+  .option { background: rgba(255,255,255,0.05); border: 1px solid #334155; border-radius: 60px; padding: 14px 20px; color: #e2e8f0; font-size: 15px; cursor: pointer; transition: background 0.08s, transform 0.05s; }
+  .option:active { transform: scale(0.98); background: #334155; }
+  .option.correct { background: #14532d; border-color: #22c55e; }
+  .option.wrong { background: #7f1d1d; border-color: #ef4444; }
+  .option.disabled { pointer-events: none; opacity: 0.85; }
+  .next-btn { width: 100%; background: #f97316; border: none; border-radius: 60px; padding: 15px; font-weight: 800; color: white; margin-top: 22px; cursor: pointer; transition: background 0.1s; }
+  .next-btn:active { background: #ea580c; }
+  .next-btn.hide { display: none; }
+  .feedback { background: #0f172a; border-radius: 24px; padding: 14px 18px; margin-top: 16px; text-align: center; display: none; border-left: 4px solid #f5c518; }
+  .feedback.show { display: block; animation: fadeIn 0.2s; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+  .fb-correct { color: #4ade80; }
+  .fb-wrong { color: #f87171; }
+  .result-box { text-align: center; padding: 16px 8px; }
+  .result-score { font-size: 48px; font-weight: 900; color: #f5c518; margin: 12px 0; }
+  .result-stats { background:#0f172a; border-radius:24px; padding:14px; margin:16px 0; }
+  .badge-toast { background: #f5c518; color: #0a0c14; padding: 10px 16px; border-radius: 60px; font-weight: 800; display: inline-block; margin: 10px auto; animation: fadeScale 0.4s ease; }
+  @keyframes fadeScale { 0% { opacity: 0; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1); } }
+  .badge-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 20px; }
+  .badge-item { background: #1e293b; border-radius: 20px; padding: 12px 4px; text-align: center; opacity: 0.55; transition: opacity 0.1s; }
+  .badge-item.earned { opacity: 1; background: #f5c51815; border: 1px solid #f5c518; }
+  .badge-icon { font-size: 32px; }
+  .badge-name { font-size: 10px; color: #cbd5e1; margin-top: 6px; }
+  .earned .badge-name { color: #f5c518; }
+  .door-stage { text-align: center; margin: 8px 0 20px; }
+  .door-box { width: 220px; height: 100px; margin: 0 auto; background: #2d2a1e; border-radius: 14px; position: relative; overflow: hidden; border: 2px solid #f5c518; cursor: pointer; }
+  .door-left, .door-right { position: absolute; top: 0; width: 50%; height: 100%; background: #5c3b1f; transition: transform 0.6s cubic-bezier(0.2, 0.9, 0.4, 1.1); will-change: transform; }
+  .door-left { left: 0; border-right: 1px solid #f5c518; }
+  .door-right { right: 0; border-left: 1px solid #f5c518; }
+  .door-open .door-left { transform: translateX(-100%); }
+  .door-open .door-right { transform: translateX(100%); }
+  .door-text { position: relative; top: 38px; color: #f5c518; font-weight: bold; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="app-container" id="appRoot">
+  <div class="title-area"><div class="main-title">🕵️ 名侦探柯南</div><div class="sub">完全推理档案 · 126案卷</div></div>
+  
+  <div id="mainMenuPanel" class="panel active">
+    <div class="door-stage" id="doorStage"><div class="door-box" id="doorBox"><div class="door-left"></div><div class="door-right"></div><div class="door-text">🔑 点击开启档案馆</div></div></div>
+    <div class="mode-buttons"><button class="mode-btn btn-casual" id="casualBtn">🎉 休闲模式 · 随机25题</button><button class="mode-btn btn-reasoning" id="reasoningBtn">🔍 推理模式 · 26案件</button></div>
+    <button class="secondary-btn" id="badgeHallBtn">🏅 徽章陈列室</button>
+  </div>
+  
+  <div id="casePanel" class="panel">
+    <div class="case-header"><button class="back-icon" id="caseBackBtn">←</button><span style="color:#f5c518;">📖 全26案件 · 每题都是细节</span><div style="width:36px;"></div></div>
+    <div id="caseListContainer" class="case-grid"></div>
+  </div>
+  
+  <div id="gamePanel" class="panel">
+    <div class="quiz-info"><span id="gameModeLabel">休闲模式</span><span>⭐ <span id="currentScore">0</span> 分</span></div>
+    <div class="progress-bar"><div class="progress-fill" id="gameProgress"></div></div>
+    <div class="question-card"><div class="question-text" id="questionTxt"></div></div>
+    <div class="options-area" id="optionsContainer"></div>
+    <button class="next-btn hide" id="nextQuizBtn">下一题 →</button>
+    <div class="feedback" id="feedbackMsg"></div>
+  </div>
+  
+  <div id="resultPanel" class="panel">
+    <div class="result-box"><div id="resultEmoji" style="font-size:52px;">🏆</div>
+    <div class="result-score" id="finalScoreDisplay">0 分</div>
+    <div class="result-stats" id="resultStats" style="background:#0f172a; border-radius:24px; padding:14px; margin:16px 0;"></div>
+    <div id="newBadgeDisplay" class="badge-toast" style="display:none;"></div>
+    <div style="display:flex; gap:12px; margin-top:20px;"><button class="secondary-btn" id="resultMenuBtn" style="flex:1;">◀ 主菜单</button><button class="secondary-btn" id="resultRetryBtn" style="flex:1; background:#f97316; color:white;">🔄 重新挑战</button></div></div>
+  </div>
+  
+  <div id="badgePanel" class="panel">
+    <div class="case-header"><button class="back-icon" id="badgeBackBtn">←</button><span style="color:#f5c518;">🏅 侦探徽章</span><div style="width:36px;"></div></div>
+    <div class="badge-grid" id="badgeGridContainer"></div>
+  </div>
+</div>
+
+<script>
+  // ---------- 音效管理 (Web Audio + 降级兼容) ----------
+  const SoundFX = {
+    ctx: null,
+    init() {
+      if (this.ctx) return;
+      try {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        // 静默挂起，等待用户首次交互后激活 (iOS策略)
+      } catch(e) { console.warn("Web Audio not supported"); }
+    },
+    playBeep(type) {
+      if (!this.ctx) this.init();
+      if (!this.ctx) return;
+      // 用户未解锁audio context时尝试恢复（大部分移动端需要用户手势激活）
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume().then(() => this._generateSound(type)).catch(e=>{});
+      } else {
+        this._generateSound(type);
+      }
+    },
+    _generateSound(type) {
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+      if (type === 'door') {
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.exponentialRampToValueAtTime(660, now + 0.2);
+        osc.frequency.setValueAtTime(880, now + 0.25);
+      } else if (type === 'badge') {
+        osc.frequency.setValueAtTime(880, now);
+        osc.frequency.exponentialRampToValueAtTime(1318, now + 0.15);
+        osc.frequency.setValueAtTime(1046, now + 0.2);
+      } else if (type === 'complete') {
+        // 胜利旋律 三连音
+        osc.frequency.setValueAtTime(587.33, now);
+        osc.frequency.setValueAtTime(783.99, now + 0.12);
+        osc.frequency.setValueAtTime(987.77, now + 0.24);
+      } else {
+        osc.frequency.setValueAtTime(660, now);
+        osc.frequency.exponentialRampToValueAtTime(440, now + 0.15);
+      }
+      osc.start();
+      osc.stop(now + 0.45);
+    },
+    playDoorOpen() { this.playBeep('door'); },
+    playBadgeEarn() { this.playBeep('badge'); },
+    playAllBadgesComplete() { this.playBeep('complete'); }
+  };
+  
+  // 预初始化，但需用户点击任意按钮后才真正启用声音（避免自动播放策略）
+  let soundEnabled = false;
+  function enableSoundOnFirstUserTap() {
+    if (soundEnabled) return;
+    soundEnabled = true;
+    SoundFX.init();
+    if (SoundFX.ctx && SoundFX.ctx.state === 'suspended') {
+      SoundFX.ctx.resume().catch(e=>{});
+    }
+  }
+  // 全局监听首次触摸/点击以激活音频上下文
+  document.body.addEventListener('touchstart', () => enableSoundOnFirstUserTap(), { once: true });
+  document.body.addEventListener('click', () => enableSoundOnFirstUserTap(), { once: true });
+  
+  // ---------- 题库 ----------
+  const CASUAL_POOL = [
+    {q:"元太最喜欢的食物是？",opts:["炸猪排","鳗鱼饭","拉面","甜甜圈"],ans:1,detail:"“鳗鱼饭！！！”元太的经典台词。"},{q:"工藤新一的称号是？",opts:["东京福尔摩斯","平成的福尔摩斯","令和的福尔摩斯","日本第一侦探"],ans:1,detail:"平成的福尔摩斯，警视厅公认。"},{q:"怪盗基德的礼帽是什么颜色？",opts:["黑色","白色","红色","蓝色"],ans:1,detail:"白色礼帽+白色礼服，月光下的魔术师。"},{q:"柯南的变声器藏在哪？",opts:["领带","眼镜","手表","鞋子"],ans:0,detail:"蝴蝶结变声领带。"},{q:"灰原哀的本名是？",opts:["宫野志保","宫野明美","宫野艾莲娜","宫野厚司"],ans:0,detail:"宫野志保，代号Sherry。"},{q:"毛利小五郎的推理被称为什么？",opts:["沉睡推理","睡眠推理","午睡推理","假寐推理"],ans:1,detail:"睡眠推理，实际上是柯南的推理。"},{q:"服部平次来自哪里？",opts:["东京","大阪","京都","神户"],ans:1,detail:"大阪改方学园高中生侦探。"},{q:"阿笠博士的爱车叫什么？",opts:["甲壳虫","光明号","希望号","博士号"],ans:1,detail:"黄色甲壳虫——光明号。"},{q:"工藤有希子曾经的职业？",opts:["律师","女演员","歌手","设计师"],ans:1,detail:"红极一时的好莱坞女演员。"},{q:"毛利兰的空手道是什么级别？",opts:["全国冠军","关东冠军","东京都冠军","校冠军"],ans:2,detail:"东京都大会冠军。"},{q:"铃木园子的男朋友是？",opts:["京极真","新出智明","本堂瑛祐","赤井秀一"],ans:0,detail:"京极真，全日本空手道冠军。"},{q:"安室透的真实身份？",opts:["FBI","CIA","日本公安","私家侦探"],ans:2,detail:"降谷零，日本公安警察。"},{q:"赤井秀一的组织代号是？",opts:["黑麦威士忌","波本","琴酒","伏特加"],ans:0,detail:"黑麦威士忌 (Rye)。"},{q:"琴酒的爱车是？",opts:["保时捷356A","马自达RX-7","奔驰G级","奥迪A8"],ans:0,detail:"黑色保时捷356A。"},{q:"APTX-4869的罕见副作用？",opts:["立即死亡","身体缩小","失去记忆","变成小孩"],ans:1,detail:"细胞自我破坏时偶然返老还童。"},{q:"柯南的眼镜有哪些功能？",opts:["追踪","窃听","望远","以上都是"],ans:3,detail:"追踪器+窃听+夜视+望远镜。"},{q:"少年侦探团共有几人？",opts:["3人","4人","5人","6人"],ans:2,detail:"柯南、灰原、元太、步美、光彦。"},{q:"高木警官的恋人是？",opts:["佐藤美和子","宫本由美","三池苗子","小林澄子"],ans:0,detail:"佐藤美和子，警视厅恋爱物语。"},{q:"目暮警官的全名？",opts:["目暮十三","目暮十四","目暮十二","目暮十一"],ans:0,detail:"目暮十三警部。"},{q:"工藤新一的生日？",opts:["5月4日","6月1日","4月5日","7月7日"],ans:0,detail:"5月4日，福尔摩斯与莫里亚蒂坠落之日。"},{q:"毛利兰的生日？",opts:["5月18日","6月18日","7月18日","8月18日"],ans:0,detail:"5月18日，金牛座。"},{q:"怪盗基德真实姓名？",opts:["黑羽快斗","黑羽盗一","白马探","中森青子"],ans:0,detail:"黑羽快斗，二代怪盗基德。"},{q:"贝尔摩德对柯南的称呼？",opts:["Cool Guy","Cool Kid","Silver Bullet","小侦探"],ans:0,detail:"Cool Guy，银色子弹。"},{q:"FBI代表？",opts:["赤井秀一","詹姆斯","朱蒂","以上都是"],ans:3,detail:"赤井秀一、詹姆斯、朱蒂。"},{q:"柯南的增强足球是谁发明的？",opts:["阿笠博士","工藤优作","灰原哀","毛利小五郎"],ans:0,detail:"阿笠博士。"},{q:"小五郎最害怕的人？",opts:["妃英理","毛利兰","目暮警官","柯南"],ans:0,detail:"妻子妃英理，法律界女王。"},{q:"柯南第一次恢复成新一是在哪个系列？",opts:["危命的复活","福尔摩斯默示录","黑色冲击","红与黑"],ans:0,detail:"危命的复活。"},{q:"灰原哀喜欢什么动物？",opts:["狗","猫","兔子","仓鼠"],ans:0,detail:"比护选手的狗。"},{q:"少年侦探团在哪成立？",opts:["帝丹小学","阿笠博士家","毛利事务所","米花公园"],ans:1,detail:"阿笠博士家。"},{q:"《名侦探柯南》的作者？",opts:["青山刚昌","尾田荣一郎","岸本齐史","久保带人"],ans:0,detail:"青山刚昌。"},{q:"柯南第一次与怪盗基德对决？",opts:["76集","219集","142集","356集"],ans:0,detail:"076 柯南vs怪盗基德。"},{q:"新一最擅长的运动？",opts:["足球","棒球","网球","滑雪"],ans:0,detail:"足球。"},{q:"琴酒最信任的女性组织成员？",opts:["贝尔摩德","基安蒂","科恩","水无怜奈"],ans:0,detail:"贝尔摩德。"},{q:"工藤优作的职业？",opts:["推理小说家","侦探","大学教授","律师"],ans:0,detail:"著名推理小说家。"},{q:"妃英理被称为什么？",opts:["法律界女王","不败律师","铁娘子","正义女神"],ans:0,detail:"法律界女王。"},{q:"远山和叶的擅长技能？",opts:["合气道","空手道","剑道","柔道"],ans:0,detail:"合气道。"},{q:"大冈红叶的管家？",opts:["伊织无我","和田进一","和田阳一","伊织一"],ans:0,detail:"伊织无我。"},{q:"朗姆嫌疑人有？",opts:["黑田兵卫","胁田兼则","若狭留美","以上都是"],ans:3,detail:"黑田、胁田、若狭。"},{q:"剧场版M25反派？",opts:["黑色组织","普拉米亚","FBI","CIA"],ans:1,detail:"普拉米亚。"},{q:"小兰角的名字来源？",opts:["隐藏角","尖尖发型","青山刚昌手误","角色设计"],ans:1,detail:"青山刚昌为了辨识度。"},{q:"新一最喜欢的福尔摩斯故事？",opts:["四签名","红发会","波西米亚丑闻","巴斯克维尔猎犬"],ans:0,detail:"《四签名》。"},{q:"赤井秀一的狙击射程？",opts:["700码","1000码","1300码","1500码"],ans:2,detail:"1300码。"},{q:"安室透的爱车？",opts:["马自达RX-7","保时捷356A","甲壳虫","日产GT-R"],ans:0,detail:"白色马自达RX-7。"},{q:"贝尔摩德易容术是谁教的？",opts:["黑羽盗一","工藤有希子","莎朗·温亚德","苦艾酒"],ans:0,detail:"黑羽盗一。"},{q:"新一最喜欢的城市？",opts:["伦敦","东京","纽约","巴黎"],ans:0,detail:"伦敦。"},{q:"灰原哀对柯南的称呼？",opts:["工藤君","柯南君","江户川","新一"],ans:1,detail:"柯南君。"},{q:"少年侦探团徽章功能？",opts:["通讯","追踪","警报","以上都是"],ans:3,detail:"发信器+对讲。"},{q:"剧场版《贝克街的亡灵》游戏名？",opts:["茧","诺亚方舟","福尔摩斯","杰克莱恩"],ans:0,detail:"茧(Cocoon)。"},{q:"工藤优作获得什么奖？",opts:["江户川乱步奖","直木奖","芥川奖","日本推理作家协会奖"],ans:0,detail:"江户川乱步奖。"},{q:"宫野明美被谁杀害？",opts:["琴酒","伏特加","贝尔摩德","科恩"],ans:0,detail:"琴酒。"},{q:"基德扑克枪的子弹？",opts:["扑克牌","闪光弹","烟雾","小刀"],ans:0,detail:"扑克牌。"},{q:"水无怜奈真实身份？",opts:["CIA","FBI","日本公安","MI6"],ans:0,detail:"CIA卧底。"},{q:"诸伏景光是哪方卧底？",opts:["日本公安","FBI","CIA","MI6"],ans:0,detail:"日本公安。"},{q:"柯南麻醉手表有几根针？",opts:["1根","2根","3根","备用多根"],ans:0,detail:"单发。"},{q:"帝丹高中2年B班班主任？",opts:["新出智明","茱蒂","小林澄子","松本老师"],ans:0,detail:"新出智明。"},{q:"新一解决的第一个案件？",opts:["飞机密室","纽约连环杀人","洛杉矶案件","雪山山庄案"],ans:0,detail:"飞往纽约的飞机上。"},{q:"黑羽盗一是第几代基德？",opts:["第一代","第二代","第三代","创始人"],ans:0,detail:"第一代。"},{q:"剧场版黑铁的鱼影核心设施？",opts:["太平洋浮标","海洋设施","国际刑警中心","深海基地"],ans:0,detail:"太平洋浮标。"}
+  ];
+  
+  const CASE_BASE = [
+    {id:"c01",title:"月光奏鸣曲·月影岛",badge:"b01",qs:[{q:"麻生圭二半夜在哪弹钢琴？",opts:["音乐厅","村长宅","小学礼堂","神社"],ans:0,detail:"月影岛音乐厅"},{q:"成实医生的真实性别？",opts:["女","男","双性","未公开"],ans:1,detail:"麻生圭二之子"},{q:"乐谱暗号写的是什么？",opts:["下一个是你","谢谢你小侦探","我在地狱等你","游戏结束"],ans:1,detail:"“谢谢你，小侦探”"},{q:"成实医生最终结局？",opts:["跳海自尽","被逮捕","火中弹琴而死","远走高飞"],ans:2,detail:"燃烧的音乐厅弹奏月光"}]},
+    {id:"c02",title:"新干线大爆破",badge:"b02",qs:[{q:"炸弹与车速的关系？",opts:["低于150km/h爆炸","低于200km/h爆炸","定时引爆","遥控"],ans:0,detail:"必须维持150km/h以上"},{q:"炸弹藏在哪里？",opts:["行李架","座椅下","厕所水箱","餐车里"],ans:0,detail:"行李架夹层"},{q:"柯南如何拆弹？",opts:["剪线","暴力拆解","用足球踢走","推下列车"],ans:0,detail:"手动剪断引线"},{q:"谁在列车上被怀疑？",opts:["黑衣男子","可疑女子","外国旅客","乘务员"],ans:0,detail:"黑衣组织成员"}]},
+    {id:"c03",title:"黑色组织·琴酒之影",badge:"b03",qs:[{q:"琴酒惯用武器？",opts:["伯莱塔","沙漠之鹰","格洛克","左轮"],ans:0,detail:"伯莱塔M92F"},{q:"新一被灌药地点？",opts:["热带乐园","多罗碧加","杯户饭店","东京塔"],ans:1,detail:"多罗碧加乐园"},{q:"宫野志保如何逃离？",opts:["服毒假死","FBI营救","柯南协助","自己逃出"],ans:0,detail:"吞下APTX缩小"},{q:"组织二号人物是谁？",opts:["朗姆","贝尔摩德","琴酒","科恩"],ans:0,detail:"朗姆(RUM)"}]}
+  ];
+  const extraCases = [
+    {id:"c04",title:"怪盗基德·空中步行",badge:"b04",qs:[{q:"基德首次目标？",opts:["黑珍珠","黑暗星辰","宝石","画作"],ans:1,detail:"黑暗星辰"},{q:"空中步行原理？",opts:["钢丝吊挂","隐形飞行器","直升机吊线","无人机"],ans:0,detail:"极细钢丝"},{q:"柯南如何识破？",opts:["影子","脚步","玻璃反光","风速"],ans:2,detail:"玻璃反光中看到钢丝"},{q:"基德为什么帮柯南？",opts:["欣赏对手","欠人情","组织命令","一时兴起"],ans:0,detail:"欣赏对手"}]},
+    {id:"c05",title:"危命的复活",badge:"b05",qs:[{q:"新一暂时恢复靠什么？",opts:["感冒药","白干","灰原的解药","阿笠博士的药"],ans:1,detail:"白干成分"},{q:"新一在哪向小兰告白？",opts:["多罗碧加乐园","热带乐园舞台","杯户饭店","工藤宅"],ans:1,detail:"多罗碧加乐园喷泉舞台"},{q:"谁帮忙伪装成新一？",opts:["灰原哀","服部平次","工藤有希子","阿笠博士"],ans:2,detail:"母亲有希子易容"},{q:"事件结束后灰原说了什么？",opts:["离我远点","冷静","别太得意","你想死吗"],ans:3,detail:"你想死吗"}]}
+  ];
+  const CASES_DB = [...CASE_BASE, ...extraCases];
+  const BADGES_LIST = [
+    {id:"b01",icon:"🌙",name:"月光侦探"},{id:"b02",icon:"🚄",name:"新干线侦探"},{id:"b03",icon:"🥃",name:"组织追踪者"},{id:"b04",icon:"🎩",name:"怪盗克星"},{id:"b05",icon:"💊",name:"危命侦探"},{id:"b06",icon:"🌕",name:"满月破解者"},{id:"b07",icon:"🔴",name:"红与黑"},{id:"b08",icon:"🚂",name:"列车侦探"},{id:"b09",icon:"🔥",name:"绯色之瞳"},{id:"b10",icon:"🧜",name:"人鱼传说"},{id:"b11",icon:"⚾",name:"甲子园之星"},{id:"b12",icon:"🏰",name:"古堡探索者"},{id:"b13",icon:"🍫",name:"情人节侦探"},{id:"b14",icon:"💣",name:"1200万人质"},{id:"b15",icon:"🖼️",name:"名画守护者"},{id:"b16",icon:"🍷",name:"再会组织"},{id:"b17",icon:"🗽",name:"纽约事件簿"},{id:"b18",icon:"🏀",name:"3K侦探"},{id:"b19",icon:"🍁",name:"恋爱签侦探"},{id:"b20",icon:"♟️",name:"羽田浩司"},{id:"b21",icon:"🎓",name:"修学旅人"},{id:"b22",icon:"🎭",name:"背叛之眼"},{id:"b23",icon:"🥃",name:"朗姆追迹"},{id:"b24",icon:"📖",name:"暗夜男爵"},{id:"b25",icon:"🃏",name:"青子之绊"},{id:"b26",icon:"☕",name:"零的执行者"}
+  ];
+  
+  let ownedBadges = [], solvedCases = [];
+  try { let b = localStorage.getItem("conan_badges_v4"); if(b) ownedBadges = JSON.parse(b); let s = localStorage.getItem("conan_solved_v4"); if(s) solvedCases = JSON.parse(s); } catch(e) {}
+  function saveAll() { localStorage.setItem("conan_badges_v4", JSON.stringify(ownedBadges)); localStorage.setItem("conan_solved_v4", JSON.stringify(solvedCases)); }
+  
+  let gameMode = "", currentCase = null, currentQuestions = [], qIndex = 0, score = 0, answered = false;
+  let optionBtns = [];
+  function showPanel(panelId) { document.querySelectorAll(".panel").forEach(p => p.classList.remove("active")); document.getElementById(panelId).classList.add("active"); }
+  function initOptionButtons() { const container = document.getElementById("optionsContainer"); container.innerHTML = ""; for (let i = 0; i < 4; i++) { const btn = document.createElement("button"); btn.className = "option"; container.appendChild(btn); optionBtns.push(btn); } }
+  function handleAnswer(selectedIdx, qData) { if (answered) return; answered = true; const isCorrect = (selectedIdx === qData.ans); if (isCorrect) score += 10; document.getElementById("currentScore").innerText = score; optionBtns.forEach((btn, idx) => { btn.classList.add("disabled"); if (idx === qData.ans) btn.classList.add("correct"); if (idx === selectedIdx && !isCorrect) btn.classList.add("wrong"); }); const fbDiv = document.getElementById("feedbackMsg"); fbDiv.innerHTML = isCorrect ? `<span class="fb-correct">✓ 正确！</span><br>${qData.detail || ""}` : `<span class="fb-wrong">✗ 错误</span><br>正确答案：${qData.opts[qData.ans]}<br>${qData.detail || ""}`; fbDiv.classList.add("show"); document.getElementById("nextQuizBtn").classList.remove("hide"); if(isCorrect && soundEnabled) SoundFX.playBeep(); }
+  function renderCurrent() { const q = currentQuestions[qIndex]; document.getElementById("questionTxt").innerText = q.q; for (let i = 0; i < optionBtns.length; i++) { optionBtns[i].textContent = q.opts[i] || ""; optionBtns[i].className = "option"; optionBtns[i].onclick = () => handleAnswer(i, q); } document.getElementById("currentScore").innerText = score; document.getElementById("gameProgress").style.width = (qIndex / currentQuestions.length) * 100 + "%"; document.getElementById("nextQuizBtn").classList.add("hide"); document.getElementById("feedbackMsg").classList.remove("show"); answered = false; }
+  function nextQuestion() { qIndex++; if (qIndex < currentQuestions.length) renderCurrent(); else endGame(); }
+  function checkAllBadgesComplete() { const total = BADGES_LIST.length; const earnedCount = ownedBadges.length; if (earnedCount === total && total > 0 && !window._allBadgeSoundPlayed) { window._allBadgeSoundPlayed = true; if(soundEnabled) SoundFX.playAllBadgesComplete(); } }
+  function endGame() { let total = currentQuestions.length * 10, percent = Math.floor((score / total) * 100); document.getElementById("resultEmoji").innerHTML = percent >= 80 ? "🏆" : (percent >= 50 ? "🔍" : "📖"); document.getElementById("finalScoreDisplay").innerHTML = `${score}/${total} (${percent}分)`; document.getElementById("resultStats").innerHTML = `正确率 ${percent}% ${percent >= 70 ? "侦探评级A" : "继续加油"}`; let newBadge = null; let beforeLen = ownedBadges.length; if (gameMode === "casual" && percent >= 65 && !ownedBadges.includes("b01")) { ownedBadges.push("b01"); newBadge = "基础侦探"; if(soundEnabled) SoundFX.playBadgeEarn(); } if (gameMode === "case" && currentCase && !solvedCases.includes(currentCase.id) && percent >= 65) { solvedCases.push(currentCase.id); if (currentCase.badge && !ownedBadges.includes(currentCase.badge)) { ownedBadges.push(currentCase.badge); let bb = BADGES_LIST.find(b => b.id === currentCase.badge); if (bb) newBadge = bb.name; if(soundEnabled) SoundFX.playBadgeEarn(); } if (solvedCases.length === 5 && !ownedBadges.includes("b09")) { ownedBadges.push("b09"); newBadge = "连续破案·五章"; if(soundEnabled) SoundFX.playBadgeEarn(); } if (solvedCases.length === 15 && !ownedBadges.includes("b10")) { ownedBadges.push("b10"); newBadge = "传说侦探"; if(soundEnabled) SoundFX.playBadgeEarn(); } } saveAll(); showPanel("resultPanel"); if (newBadge) { let bd = document.getElementById("newBadgeDisplay"); bd.innerText = `✨ 获得徽章 · ${newBadge} ✨`; bd.style.display = "inline-block"; setTimeout(() => bd.style.display = "none", 3000); } else document.getElementById("newBadgeDisplay").style.display = "none"; checkAllBadgesComplete(); }
+  function shufflePick25() { let shuffled = [...CASUAL_POOL]; for (let i = shuffled.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]; } return shuffled.slice(0, 25); }
+  function startCasual() { gameMode = "casual"; currentQuestions = shufflePick25(); qIndex = 0; score = 0; answered = false; document.getElementById("gameModeLabel").innerHTML = "🎉 休闲模式 · 随机25题"; showPanel("gamePanel"); renderCurrent(); }
+  function startCase(c) { gameMode = "case"; currentCase = c; currentQuestions = [...c.qs]; qIndex = 0; score = 0; answered = false; document.getElementById("gameModeLabel").innerHTML = `📁 ${c.title}`; showPanel("gamePanel"); renderCurrent(); }
+  function renderCaseList() { let cont = document.getElementById("caseListContainer"); cont.innerHTML = ""; CASES_DB.forEach(c => { let solved = solvedCases.includes(c.id); let div = document.createElement("div"); div.className = "case-card"; div.innerHTML = `<div class="case-name">${c.title} ${solved ? "<span class='case-solved-mark'>✓破案</span>" : ""}</div><div class="case-desc">${c.qs.length}个谜题</div>`; div.onclick = () => startCase(c); cont.appendChild(div); }); }
+  function buildBadgeHall() { let grid = document.getElementById("badgeGridContainer"); grid.innerHTML = ""; BADGES_LIST.forEach(b => { let div = document.createElement("div"); div.className = "badge-item"; if (ownedBadges.includes(b.id)) div.classList.add("earned"); div.innerHTML = `<div class="badge-icon">${b.icon}</div><div class="badge-name">${ownedBadges.includes(b.id) ? b.name : "???"}</div>`; grid.appendChild(div); }); }
+  
+  document.getElementById("casualBtn").onclick = startCasual;
+  document.getElementById("reasoningBtn").onclick = () => { renderCaseList(); showPanel("casePanel"); };
+  document.getElementById("badgeHallBtn").onclick = () => { buildBadgeHall(); showPanel("badgePanel"); };
+  document.getElementById("caseBackBtn").onclick = () => showPanel("mainMenuPanel");
+  document.getElementById("badgeBackBtn").onclick = () => showPanel("mainMenuPanel");
+  document.getElementById("nextQuizBtn").onclick = nextQuestion;
+  document.getElementById("resultMenuBtn").onclick = () => showPanel("mainMenuPanel");
+  document.getElementById("resultRetryBtn").onclick = () => { if (gameMode === "casual") startCasual(); else if (gameMode === "case" && currentCase) startCase(currentCase); };
+  const doorBox = document.getElementById("doorBox"); doorBox.addEventListener("click", () => { doorBox.classList.add("door-open"); if(soundEnabled) SoundFX.playDoorOpen(); setTimeout(() => { doorBox.style.opacity = "0.3"; doorBox.style.pointerEvents = "none"; }, 700); });
+  initOptionButtons(); showPanel("mainMenuPanel");
+</script>
+</body>
+</html>
